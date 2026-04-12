@@ -57,14 +57,16 @@ class Gregorian:
     def fromordinal( self, ord:int ):
         """ invert of toordinal(): return year,month,day of given ordinal
         """
-        ord += 305                                   # jan 1st 1 = 1 --> mar 1st 0 = 0
-        y400, ord = divmod( ord, self._DAYS400Y )
-        y100      = min(  ord // self._DAYS100Y, 3 ) # 0..3: 146096/36524==4! - every 4th century has 1 more day
-        ord      -=       y100 * self._DAYS100Y
-        y4, ord   = divmod( ord, self._DAYS4Y )      # 0..24: (every century has one day less - 24 is max. anyway)
-        y1        = min(  ord // self._DAYS1Y, 3 )   # 0..3: 1460/365==4! - every 4th year has 1 more day
-        ord      -=         y1 * self._DAYS1Y        # ord here: days past Mar 1st (0..365)
-        y = (y400*400) + (y100*100) + (y4*4) + y1    # ==year-1, when jan or feb
+        def divmodmax( number, div, max ):
+            n = min( number // div, max )  # integer division with given maximum
+            return n, number - (n*div)     # rest (>=div, when number//div > max)
+
+        ord += 305                                      # jan 1st 1 = 1 --> mar 1st 0 = 0
+        y400, ord = divmod(    ord, self._DAYS400Y )
+        y100, ord = divmodmax( ord, self._DAYS100Y, 3 ) # 0..3: 146096/36524==4 - every 4th century has 1 more day
+        y4,   ord = divmod(    ord, self._DAYS4Y )      # 0..24:                  every century has one day less
+        y1,   ord = divmodmax( ord, self._DAYS1Y, 3 )   # 0..3: 1460/365==4     - every 4th year has 1 more day
+        y = (y400*400) + (y100*100) + (y4*4) + y1       # == year-1, when jan or feb
 
         m153, ord = divmod( ord, 153 )  # 0..2: number of 5 months blocks 31,30,31,30,31
         m61,  ord = divmod( ord,  61 )  # 0..2: number of 2 months blocks 31,30
