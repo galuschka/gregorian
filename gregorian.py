@@ -1,6 +1,7 @@
 """ date calculation on Gregorian calendar
 
-This class uses Jan 1st 1 as reference as ordinal 1 (as datetime.date.toordinal).
+This module uses Jan 1st 1 as ordinal 1 (same as datetime.date.toordinal).
+For internal calculation, we shit to (imaginary) Mar 1st 0 as offset 0.
 When starting at Mar 1st, the number of days per month is pure integer artihmetic:
                            |   |   |   |   |
                            v   v   v   v   v
@@ -8,27 +9,31 @@ When starting at Mar 1st, the number of days per month is pure integer artihmeti
     Aug,Sep,Oct,Nov,Dec:  31, 30, 31, 30, 31   ∑: 153 days
     Jan,Feb:              31, rest             leap year day just added at end of list
 """
-
-#                                      +31   +30   +31   +30   +31
-#                                     +---+ +---+ +---+ +---+ +--->
-#                                     |   | |   | |   | |   | |
-#                      - jan, feb, mar|   v |   v |   v |   v |
-_DAYS_BEFORE_MONTH = [ 0,  0,  31, -306, -275, -245, -214, -184,
-                                   -153, -122,  -92,  -61,  -31 # jan:0,feb:31
-] #                                ^  |   ^ |   ^ |   ^ |   ^ |   ^   |     ^
-#                                  |  |   | |   | |   | |   | |   |   |     |
-#                         -184 >---+  +---+ +---+ +---+ +---+ +---+   +-----+
-#                           ... +31    +31   +30   +31   +30   +31      +31
+#     toordinal( 1, 1, 1 )          = 1  (to match same as datetime.date.toordinal)
+# ==> 0 + _DAYS_BEFORE_MONTH[1] + 1 = 1  (see [1])
+# ==>     _DAYS_BEFORE_MONTH[1]     = 0
+#                                            -31   -30   -31   -30   -31
+#                                           +---+ +---+ +---+ +---+ +-< -153
+#                                           |   | |   | |   | |   | |
+#                       -   jan, feb,   mar v   | v   | v   | v   | v
+_DAYS_BEFORE_MONTH = [ None,  0,  31,    -306, -275, -245, -214, -184,
+                                         -153, -122,  -92,  -61,  -31 # 0:jan, 31:feb
+] #                                      |  ^   | ^   | ^   | ^   | ^   |   |   ^  |
+#                                        |  |   | |   | |   | |   | |   |   |   |  |
+#                                      <-+  +---+ +---+ +---+ +---+ +---+   +---+  v
+#                                            -31   -30   -31   -30   -31     +31  rest
 
 def toordinal( year, month, day ):
-    y = year - (((month + 9) % 12) // 10)
+    """ return ordinal of given date as datetime.date.toordinal: Jan 1st 1 = 1
+    """
+    y = year - (((month + 9) % 12) // 10)  # ...-1 when jan or feb
     return y*365 + y//4 - y//100 + y//400 + _DAYS_BEFORE_MONTH[month] + day
 
 def ordinal_jan1( year:int ):
     """ return ordinal of Jan 1st of year
     """
-    y = year - 1  # jan/feb: 1 year before y
-    return y*365 + (y//4) - (y//100) + (y//400) + 1  # _DAYS_BEFORE_MONTH[1] = 0
+    y = year - 1                               # ...-1 since jan
+    return y*365 + y//4 - y//100 + y//400 + 1  # [1] ==> _DAYS_BEFORE_MONTH[1] = 0
 
 def fromordinal( n:int ):
     """ inverse of toordinal(): return year,month,day of given ordinal
